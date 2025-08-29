@@ -1,0 +1,18 @@
+﻿# build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY . ./ProductService.API
+COPY ../ProductService.Application ./ProductService.Application
+COPY ../ProductService.Infrastructure ./ProductService.Infrastructure
+COPY ../ProductService.Domain ./ProductService.Domain
+RUN dotnet restore ProductService.API/ProductService.API.csproj \
+&& dotnet publish ProductService.API/ProductService.API.csproj -c Release -o /app/publish
+
+
+# runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+ENTRYPOINT ["dotnet","ProductService.API.dll"]

@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+mssql:
+image: mcr.microsoft.com/mssql/server:2022-latest
+container_name: mssql
+environment:
+- ACCEPT_EULA=Y
+- SA_PASSWORD=Your_password123
+ports:
+- "1433:1433"
+healthcheck:
+test: ["CMD", "bash", "-c", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Your_password123 -Q 'SELECT 1' || exit 1"]
+interval: 10s
+timeout: 5s
+retries: 10
+
+
+productservice:
+build:
+context: ./services/ProductService/ProductService.API
+dockerfile: Dockerfile
+environment:
+- ASPNETCORE_ENVIRONMENT=Development
+- ConnectionStrings__Default=Server=mssql;Database=ProductsDb;User Id=sa;Password=Your_password123;TrustServerCertificate=True
+depends_on:
+mssql:
+condition: service_healthy
+ports:
+- "8080:8080"
+
+
+orderservice:
+build:
+context: ./services/OrderService/OrderService.API
+dockerfile: Dockerfile
+environment:
+- ASPNETCORE_ENVIRONMENT=Development
+- ConnectionStrings__Default=Server=mssql;Database=OrdersDb;User Id=sa;Password=Your_password123;TrustServerCertificate=True
+- ProductService__BaseUrl=http://productservice:8080
+depends_on:
+mssql:
+condition: service_healthy
+productservice:
+condition: service_started
+ports:
+- "8081:8081"
